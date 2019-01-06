@@ -1,0 +1,128 @@
+def mk_world(x, y) {
+  w = alloc(y, 0);
+  i = 0;
+  while(i < y) {
+    r = alloc(x, 0);
+    w[i] = r;
+    i = i + 1;
+  }
+  return w;
+}
+
+def world_str(w, x, y) {
+  i = 0;
+  b = "";
+  while(i < y) {
+    r = "";
+    j = x - 1;
+    while(0 <= j) {
+      if(w[i][j] == 0) {
+        r = " " + r;
+      } else {
+        r = "*" + r;
+      }
+      j = j - 1;
+    }
+    b = "\n" + r + b;
+    i = i + 1;
+  }
+  return b;
+}
+
+def clear() {
+  _ = print_val( "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+               + "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+               + "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+               );
+  return 0;
+}
+
+def nap(n) {
+  if(0 < n) {
+    _ = nap(n - 1);
+    _ = nap(n - 1);
+  }
+  return 0;
+}
+
+def neighbor_count(w, x, y, i, j) {
+  u = (i - 1 + y) % y;
+  d = (i + 1 + y) % y;
+  l = (j - 1 + x) % x;
+  r = (j + 1 + x) % x;
+
+  n = w[u][l] + w[u][j] + w[u][r] +
+      w[i][l] +    0    + w[i][r] +
+      w[d][l] + w[d][j] + w[d][r];
+
+  return n;
+}
+
+def step(prev, next, x, y) {
+  i = 0;
+  while(i < y) {
+    j = 0;
+    while(j < x) {
+      n = neighbor_count(prev, x, y, i, j);
+      r = next[i];
+      if(prev[i][j] == 0) {
+        if(n == 3) {
+          r[j] = 1;
+        } else {
+          r[j] = 0;
+        }
+      } else {
+        if(n == 2 or n == 3) {
+          r[j] = 1;
+        } else {
+          r[j] = 0;
+        }
+      }
+      j = j + 1;
+    }
+    i = i + 1;
+  }
+  return 0;
+}
+
+def acorn(w, baseR, baseC) {
+  r = w[baseR];
+  r[baseC + 1] = 1;
+
+  r = w[baseR + 1];
+  r[baseC + 3] = 1;
+
+  r = w[baseR + 2];
+  r[baseC + 0] = 1;
+  r[baseC + 1] = 1;
+  r[baseC + 4] = 1;
+  r[baseC + 5] = 1;
+  r[baseC + 6] = 1;
+
+  return 0;
+}
+
+W = 20;
+H = 20;
+
+prev = mk_world(W, H);
+next = mk_world(W, H);
+
+_ = acorn(prev, 10, 8);
+
+while(True) {
+  b = world_str(prev, W, H);
+  _ = clear();
+  _ = print_val(b);
+  _ = flush();
+  _ = step(prev, next, W, H);
+  _ = sleep(200);
+
+  b = world_str(next, W, H);
+  _ = clear();
+  _ = print_val(b);
+  _ = flush();
+  _ = step(next, prev, W, H);
+}
+
+return 0;

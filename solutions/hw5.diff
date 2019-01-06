@@ -1,0 +1,331 @@
+diff -ruN homework/hw5/HW5.v solutions/hw5/HW5.v
+--- homework/hw5/HW5.v	2018-11-07 20:49:08.000000000 -0800
++++ solutions/hw5/HW5.v	2019-01-06 05:08:58.000000000 -0800
+@@ -1,3 +1,5 @@
++(* Lequn Chen & Ofir Press *)
++
+ Require Import Frap Frap.Imp.
+ 
+ (*
+@@ -53,6 +55,30 @@
+  * the bugs in my compiler.
+  *)
+ Inductive eval_buggy : valuation -> cmd -> valuation -> Prop :=
++| EvalBuggySkip : forall v,
++    eval_buggy v Skip v
++| EvalBuggyAssign : forall v x e,
++    eval_buggy v (Assign x e) (v $+ (x, interp e v))
++| EvalBuggySeq : forall v c1 v1 c2 v2,
++    eval_buggy v c1 v1
++    -> eval_buggy v1 c2 v2
++    -> eval_buggy v (Sequence c1 c2) v2
++| EvalBuggyIfTrue : forall v e then_ else_ v',
++    interp e v = 0
++    -> eval_buggy v then_ v'
++    -> eval_buggy v (If e then_ else_) v'
++| EvalBuggyIfFalse : forall v e then_ else_ v',
++    interp e v <> 0
++    -> eval_buggy v else_ v'
++    -> eval_buggy v (If e then_ else_) v'
++| EvalBuggyWhileTrue : forall v e body v' v'',
++    interp e v <> 0
++    -> eval_buggy v body v'
++    -> eval_buggy v' (While e body) v''
++    -> eval_buggy v (While e body) v''
++| EvalBuggyWhileFalse : forall v e body,
++    interp e v = 0
++    -> eval_buggy v (While e body) v
+ . (* YOUR CODE HERE *)
+ 
+ (*
+@@ -63,6 +89,25 @@
+  * the bugs in my compiler.
+  *)
+ Inductive step_buggy : valuation * cmd -> valuation * cmd -> Prop :=
++| StepBuggyAssign : forall v x e,
++    step_buggy (v, Assign x e) (v $+ (x, interp e v), Skip)
++| StepBuggySeq1 : forall v c1 c2 v' c1',
++    step_buggy (v, c1) (v', c1')
++    -> step_buggy (v, Sequence c1 c2) (v', Sequence c1' c2)
++| StepBuggySeq2 : forall v c2,
++    step_buggy (v, Sequence Skip c2) (v, c2)
++| StepBuggyIfTrue : forall v e then_ else_,
++    interp e v = 0
++    -> step_buggy (v, If e then_ else_) (v, then_)
++| StepBuggyIfFalse : forall v e then_ else_,
++    interp e v <> 0
++    -> step_buggy (v, If e then_ else_) (v, else_)
++| StepBuggyWhileTrue : forall v e body,
++    interp e v <> 0
++    -> step_buggy (v, While e body) (v, Sequence body (While e body))
++| StepBuggyWhileFalse : forall v e body,
++    interp e v = 0
++    -> step_buggy (v, While e body) (v, Skip)
+ . (* YOUR CODE HERE *)
+ 
+ (* --- Program transformation --- *)
+@@ -102,7 +147,11 @@
+ Fixpoint transform (c : cmd) : cmd :=
+   match c with
+   (* YOUR CODE HERE *)
+-  | _ => c
++  | Skip => Skip
++  | Assign x e => Assign x e
++  | Sequence c1 c2 => Sequence (transform c1) (transform c2)
++  | If e then_ else_ => If e (transform else_) (transform then_)
++  | While e body => While e (transform body)
+   end.
+ 
+ (*
+@@ -118,6 +167,21 @@
+  * and Transform_transform theorems below should both be provable.
+  *)
+ Inductive Transform  : cmd -> cmd -> Prop :=
++| TransformSkip: 
++    Transform Skip Skip
++| TransformAssign: forall v e,
++    Transform (Assign v e) (Assign v e)
++| TransformSeq: forall c1 c2 tc1 tc2,
++    Transform c1 tc1 ->
++    Transform c2 tc2 ->
++    Transform (Sequence c1 c2) (Sequence tc1 tc2)
++| TransformIf: forall e then_ else_ tthen telse,
++    Transform then_ tthen ->
++    Transform else_ telse ->
++    Transform (If e then_ else_) (If e telse tthen)
++| TransformWhile: forall e body tbody,
++    Transform body tbody ->
++    Transform (While e body) (While e tbody)
+ . (* YOUR CODE HERE *)
+ 
+ (*
+@@ -133,7 +197,24 @@
+     Transform c1 c2.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induction c1; simplify.
++  * rewrite <-H.
++    apply TransformSkip.
++  * rewrite <-H.
++    apply TransformAssign.
++  * destruct c2; try discriminate.
++    inversion H.
++    apply TransformSeq; auto.
++  * destruct c2; try discriminate.
++    inversion H.
++    apply IHc1_2 in H2.
++    apply IHc1_1 in H3.
++    apply TransformIf; auto.
++  * destruct c2; try discriminate.
++    inversion H.
++    apply IHc1 in H2.
++    apply TransformWhile; auto.
++Qed. (* CHANGE TO QED *)
+ 
+ (*
+  * Problem 6 [5 points, ~10 tactics]: Prove Trasform_transform.
+@@ -146,7 +227,8 @@
+     transform c1 = c2.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induction 1; simplify; equality.
++Qed. (* CHANGE TO QED *)
+ 
+ (* --- Transformation steps correctly --- *)
+ 
+@@ -188,7 +270,49 @@
+       Transform (snd p2) c2'.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1; simplify.
++  * apply Transform_transform in H.
++    rewrite <-H in H0.
++    inversion H0.
++    apply TransformSkip.
++  * rename c1 into c1_fst.
++    rename c2 into c1_snd.
++    rename c1' into c2_fst.
++    rename c1'0 into c1'.
++    inversion H0; subst; clear H0.
++    inversion H1; subst; clear H1.
++    + eapply TransformSeq; eauto.
++    + inversion H4; subst; clear H4.
++      inversion H.
++  * inversion H; subst; clear H.
++    inversion H3; subst; clear H3.
++    inversion H0; subst; clear H0.
++    + inversion H1.
++    + exact H5.
++  * inversion H0; subst; clear H0.
++    inversion H1; subst; clear H1.
++    + equality.
++    + exact H6.
++  * inversion H0; subst; clear H0.
++    inversion H1; subst; clear H1.
++    + exact H7.
++    + equality.
++  * inversion H0; subst; clear H0.
++    inversion H1; subst; clear H1.
++    + apply transform_Transform.
++      simplify.
++      f_equal.
++      - apply Transform_transform.
++        exact H5.
++      - f_equal.
++        apply Transform_transform.
++        exact H5.
++    + equality.
++  * inversion H0; subst; clear H0.
++    inversion H1; subst; clear H1.
++    + equality.
++    + apply TransformSkip.
++Qed. (* CHANGE TO QED *)
+ 
+ (*
+  * OK, so now we have a good result that holds as long as we an always take a step with our
+@@ -217,7 +341,41 @@
+         step_buggy (fst p1, c1') (fst p2, c2').
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1; simplify.
++  * apply Transform_transform in H.
++    subst.
++    exists Skip.
++    econstructor; eauto.
++  * inversion H0; subst; clear H0.
++    specialize (IHstep tc1).
++    destruct IHstep; auto.
++    cases tc1.
++    + inversion H0.
++    + exists (x;; tc2).
++      econstructor; eauto.
++    + exists (x;; tc2).
++      econstructor; eauto.
++    + exists (x;; tc2).
++      econstructor; eauto.
++    + exists (x;; tc2).
++      econstructor; eauto.
++  * inversion H; subst; clear H.
++    inversion H2; subst; clear H2.
++    exists tc2.
++    econstructor; eauto.
++  * inversion H0; subst; clear H0.
++    exists tthen.
++    econstructor; eauto.
++  * inversion H0; subst; clear H0.
++    exists telse.
++    econstructor; eauto.
++  * inversion H0; subst; clear H0.
++    exists (tbody;; while e loop tbody done).
++    econstructor; eauto.
++  * inversion H0; subst; clear H0.
++    exists Skip.
++    econstructor; eauto.
++Qed. (* CHANGE TO QED *)
+ 
+ (*
+  * Great! Now we can show our Transform relation steps correctly.
+@@ -251,7 +409,9 @@
+   transformation_steps_correctly transform.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  unfold transformation_steps_correctly.
++  induct 1; simplify; econstructor; eauto.
++Qed. (* CHANGE TO QED *)
+ 
+ (* --- Transitive closure --- *)
+ 
+@@ -293,7 +453,12 @@
+     step_buggy^* (fst p1, transform (snd p1)) (fst p2, transform (snd p2)).
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1.
++  + econstructor; eauto.
++  + econstructor; eauto.
++    apply transform_steps_correctly.
++    exact H.
++Qed. (* CHANGE TO QED *)
+ 
+ (* --- Relating the transitive closure and eval --- *)
+ 
+@@ -348,16 +513,16 @@
+   apply step_star_Seq_buggy.
+   eassumption.
+   econstructor.
+-  apply StepSeq2'.
++  apply StepBuggySeq2.
+   assumption.
+ 
+   econstructor.
+-  apply StepIfFalse'.
++  apply StepBuggyIfTrue.
+   assumption.
+   assumption.
+ 
+   econstructor.
+-  constructor.
++  apply StepBuggyIfFalse.
+   assumption.
+   assumption.
+ 
+@@ -368,11 +533,11 @@
+   apply step_star_Seq_buggy.
+   eassumption.
+   econstructor.
+-  apply StepSeq2'.
++  apply StepBuggySeq2.
+   assumption.
+ 
+   econstructor.
+-  apply StepWhileFalse'.
++  apply StepBuggyWhileFalse.
+   assumption.
+   constructor.
+ Qed.
+@@ -396,11 +561,11 @@
+   constructor.
+   assumption.
+ 
+-  apply EvalIfFalse'.
++  apply EvalBuggyIfTrue.
+   assumption.
+   assumption.
+ 
+-  constructor.
++  apply EvalBuggyIfFalse.
+   assumption.
+   assumption.
+ 
+@@ -411,7 +576,7 @@
+   assumption.
+ 
+   invert H0.
+-  apply EvalWhileFalse'.
++  apply EvalBuggyWhileFalse.
+   assumption.
+ Qed.
+ 
+@@ -457,7 +622,16 @@
+   transformation_is_correct transform.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  unfold transformation_is_correct.
++  induct 1; simplify.
++  + econstructor; eauto.
++  + econstructor; eauto.
++  + econstructor; eauto.
++  + eapply EvalBuggyIfFalse; eauto.
++  + econstructor; eauto.
++  + econstructor; eauto.
++  + eapply EvalBuggyWhileFalse; eauto.
++Qed. (* CHANGE TO QED *)
+ 
+ (*
+  * Thank you so much! I can now feel that much more certain that my demo will work!

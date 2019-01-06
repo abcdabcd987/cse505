@@ -1,0 +1,213 @@
+diff -ruN homework/hw4/coq/HW4.v solutions/hw4/coq/HW4.v
+--- homework/hw4/coq/HW4.v	2018-10-19 09:42:38.000000000 -0700
++++ solutions/hw4/coq/HW4.v	2019-01-06 05:07:16.000000000 -0800
+@@ -10,6 +10,8 @@
+  * This homework is spread across two files, ImpInterp and ImpInterpProof:
+  *)
+ 
++(* Lequn Chen & Jialin Li *)
++
+ Require Import Imp.ImpInterp.
+ Require Import Imp.ImpInterpProof.
+ 
+diff -ruN homework/hw4/coq/ImpInterp.v solutions/hw4/coq/ImpInterp.v
+--- homework/hw4/coq/ImpInterp.v	2018-10-19 09:13:54.000000000 -0700
++++ solutions/hw4/coq/ImpInterp.v	2019-01-06 05:07:14.000000000 -0800
+@@ -1,3 +1,5 @@
++(* Lequn Chen & Jialin Li *)
++
+ Require Import List.
+ Require Import String.
+ Require Import ZArith.
+@@ -35,14 +37,35 @@
+ Definition interp_op2
+   (op : op2) (v1 v2 : val) : option val :=
+   match op, v1, v2 with
++  (* YOUR CODE HERE *)
+   | Oadd, Vint i1, Vint i2 =>
+       Some (Vint (Z.add i1 i2))
++  | Oadd, Vstr s1, Vstr s2 =>
++      Some (Vstr (String.append s1 s2))
++  | Osub, Vint i1, Vint i2 =>
++      Some (Vint (Z.sub i1 i2))
++  | Omul, Vint i1, Vint i2 =>
++      Some (Vint (Z.mul i1 i2))
+   | Odiv, Vint i1, Vint i2 =>
+       if Z.eq_dec i2 0 then
+         None
+       else
+         Some (Vint (Z.div i1 i2))
+-  (* YOUR CODE HERE *)
++  | Omod, Vint i1, Vint i2 =>
++      if Z.eq_dec i2 0 then
++        None
++      else 
++        Some (Vint (Z.modulo i1 i2))
++  | Oeq, v1, v2 =>
++      Some (Vbool (imp_eq v1 v2))
++  | Olt, Vint i1, Vint i2 =>
++      Some (Vbool (imp_lt i1 i2))
++  | Ole, Vint i1, Vint i2 =>
++      Some (Vbool (imp_le i1 i2))
++  | Oconj, Vbool b1, Vbool b2 =>
++      Some (Vbool (andb b1 b2))
++  | Odisj, Vbool b1, Vbool b2 =>
++      Some (Vbool (orb b1 b2))
+   | _, _, _ =>
+       None
+   end.
+@@ -125,6 +148,14 @@
+   (p : stmt) : option (store * heap) :=
+   match fuel with O => None | S n =>
+     match p with  
++    (* YOUR CODE HERE *)
++    | Snop =>
++        Some (s, h)
++    | Sset x e =>
++        match interp_e s h e with
++        | Some v => Some (update s x v, h)
++        | None => None
++        end
+     | Salloc x e1 e2 =>
+         match interp_e s h e1, interp_e s h e2 with
+         | Some (Vint i), Some v =>
+@@ -184,8 +215,27 @@
+             end
+         | None => None
+         end
+-    (* YOUR CODE HERE *)
+-    | _ => None
++    | Sifelse e p1 p2 =>
++        match interp_e s h e with
++        | Some (Vbool true)  => interp_s n env s h p1
++        | Some (Vbool false) => interp_s n env s h p2
++        | _ => None
++        end
++    | Swhile e p =>
++        match interp_e s h e with
++        | Some (Vbool true)  =>
++            match interp_s n env s h p with
++            | Some (s2, h2) => interp_s n env s2 h2 (Swhile e p)
++            | None => None
++            end
++        | Some (Vbool false) => Some (s, h)
++        | _ => None
++        end
++    | Sseq p1 p2 =>
++        match interp_s n env s h p1 with
++        | Some (s2, h2) => interp_s n env s2 h2 p2
++        | None => None
++        end
+     end
+   end.
+ 
+diff -ruN homework/hw4/coq/ImpInterpProof.v solutions/hw4/coq/ImpInterpProof.v
+--- homework/hw4/coq/ImpInterpProof.v	2018-10-19 09:49:20.000000000 -0700
++++ solutions/hw4/coq/ImpInterpProof.v	2019-01-06 05:07:14.000000000 -0800
+@@ -1,3 +1,5 @@
++(* Lequn Chen & Jialin Li *)
++
+ Require Import List.
+ Require Import String.
+ Require Import ZArith.
+@@ -83,7 +85,10 @@
+     eval_binop op v1 v2 v'.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  unfold interp_op2.
++  intros.
++  repeat break_match; subst; try discriminate; inversion H; constructor; apply n.
++Qed. (* CHANGE TO QED *)
+ 
+ (*
+  * Problem 1 continued (correctness test) [necessary to get points for Problem 1]: 
+@@ -95,10 +100,10 @@
+     eval_binop op v1 v2 v' ->
+     interp_op2 op v1 v2 = Some v'.
+ Proof.
+-  (* inversion 1; auto.
++  inversion 1; auto.
+   - simpl. break_match; [congruence | auto].
+-  - simpl. break_match; [congruence | auto].*) (* UNCOMMENT *)
+-Admitted. (* CHANGE TO QED *)
++  - simpl. break_match; [congruence | auto]. (* UNCOMMENT *)
++Qed. (* CHANGE TO QED *)
+ 
+ Lemma interp_e_eval_e :
+   forall s h e v,
+@@ -181,7 +186,73 @@
+     eval_s env s h p s' h'.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct fuel.
++  discriminate.
++
++  destruct p; simpl; intros.
++  - find_inversion.
++    ee.
++  - repeat break_match; try discriminate.
++    find_inversion. ee.
++    apply interp_e_eval_e.
++    assumption.
++  - repeat break_match; try discriminate.
++    find_inversion.
++    ee; apply interp_e_eval_e; assumption.
++  - repeat break_match; try discriminate.
++    find_inversion.
++    ee; apply interp_e_eval_e; assumption.
++  - rename fuel into n.
++    rename s1 into f.
++    rename s' into s_prime.
++    rename h' into h_prime.
++    rename l into es.
++    break_match; try discriminate.
++    rename l into vs.
++    break_match.
++    rename f0 into locate_res.
++    + break_match.
++      assert (Heq_f_s2 := Heqo0).
++      apply locate_inv in Heq_f_s2.
++      subst s1.
++      rename l into params.
++      rename s2 into body.
++      rename e into ret.
++      break_match; try discriminate.
++      rename s1 into sf.
++      break_match; try discriminate.
++      assert (Hinterp_s_sf := Heqo2).
++      break_match; try discriminate.
++      rename s1 into sf'.
++      rename h0 into h'.
++      break_match; try discriminate.
++      rename v into v'.
++      find_apply_lem_hyp interps_e_evals_e.
++      find_apply_lem_hyp interp_e_eval_e.
++      apply IHfuel in Heqo2.
++      find_inversion.
++      ee.
++    + break_match; try discriminate.
++      break_match.
++      rename s0 into x.
++      rename v into v'.
++      rename h0 into h'.
++      find_apply_lem_hyp interps_e_evals_e.
++      assert (Hextcall_spec := Heqp).
++      apply extcall_ok in Hextcall_spec.
++      inversion H.
++      subst h_prime.
++      subst s_prime.
++      econstructor 6; eauto.
++  - repeat break_match; try discriminate.
++    + ee. apply interp_e_eval_e. assumption.
++    + econstructor 8; auto. apply interp_e_eval_e. assumption.
++  - repeat break_match; try discriminate.
++    + ee. apply interp_e_eval_e. assumption.
++    + find_inversion. econstructor 10. apply interp_e_eval_e. assumption.
++  - repeat break_match; try discriminate.
++    ee.
++  Qed. (* CHANGE TO QED *)
+ 
+ Lemma interp_p_eval_p :
+   forall n funcs main ret h' v',

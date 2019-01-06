@@ -1,0 +1,49 @@
+def partition(a, pivot, l, h) {
+  # Partition `a[l:h]` into three chunks: <pivot, =pivot, >pivot
+
+  i = l;
+  while (i < h) {
+    if (a[i] < pivot) {
+      tmp = a[l]; a[l] = a[i]; a[i] = tmp;
+      l = l + 1;
+      i = i + 1;
+    } else {
+      if (a[i] == pivot) {
+        i = i + 1;
+      } else { # a[i] > pivot
+        tmp = a[h - 1]; a[h - 1] = a[i]; a[i] = tmp;
+        h = h - 1;
+      }
+    }
+  }
+  return i;
+}
+
+def quicksort(a, lo, hi) {
+    _ = print_val(a);
+    if (1 < hi - lo) {
+      mid = partition(a, a[lo], lo, hi);
+      _ = quicksort(a, lo, mid);
+      _ = quicksort(a, mid, hi);
+    }
+    return a;
+}
+
+n = read_int();
+
+if (n < 0) {
+   n = -n;
+}
+
+a = alloc(n, 0);
+i = 0;
+while (i < n) {
+  a[i] = n - i;
+  i = i + 1;
+}
+
+pivot = n / 2;
+
+result = quicksort(a, 0, len(a));
+
+return result;

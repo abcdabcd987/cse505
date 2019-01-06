@@ -1,0 +1,119 @@
+open ImpSyntax
+
+let (|>) x f = f x
+
+let rand_int () =
+  (if Random.bool () then 1 else -1) * Random.int 100
+
+let rand_elt l =
+  List.nth l (Random.int (List.length l))
+
+let is_int_var = function
+  | (_, Vint _) -> true
+  | _ -> false
+
+let is_bool_var = function
+  | (_, Vbool _) -> true
+  | _ -> false
+
+let is_addr_var = function
+  | (_, Vaddr _) -> true
+  | _ -> false
+
+let rand_var p store =
+  store |> List.filter p
+        |> rand_elt
+        |> fst
+
+let gen_int_op2 () =
+  match Random.int 5 with
+  | 0 -> Add
+  | 1 -> Sub
+  | 2 -> Mul
+  | 3 -> Div
+  | 4 -> Mod
+  | _ -> failwith "gen_int_op2"
+
+let rec gen_int_expr s h size =
+  match Random.int 6 with
+  | 0 -> Eval (Vint (rand_int ()))
+  | 1 -> Evar (rand_var is_int_var s)
+  | 2 -> Eop1 (Neg, (gen_int_expr s h (size - 1)))
+  | 3 -> Eop2 ( gen_int_op2 ()
+              , gen_int_expr s h (size / 2)
+              , gen_int_expr s h (size / 2)
+              )
+  | 4 -> Elen ( gen_addr_expr s h (size / 2)
+              , gen_int_expr s h (size / 2)
+              )
+  idx
+
+let rand_val () =
+  match Random.int 2 with
+  | 0 -> Vint (rand_int ())
+  | 1 -> Vbool (Random.bool ())
+  | _ -> failwith "rand_val"
+
+let rand_op1 () =
+  match Random.int 2 with
+  | 0 -> Neg
+  | 1 -> Not
+  | _ -> failwith "rand_op1"
+
+let rand_op2 () =
+  match Random.int 2 with
+  | 0 -> Add
+  | 1 -> Sub
+  | 2 -> Mul
+  | 3 -> Div
+  | 4 -> Mod
+  | 5 -> Eq
+  | 6 -> Lt
+  | 7 -> Le
+  | 8 -> Conj
+  | 9 -> Disj
+  | _ -> failwith "rand_op2"
+
+let rec rand_expr size =
+  if size <= 1 then
+    match Random.int 2 with
+    | 0 -> Eval (rand_val ())
+    | 1 -> Evar (rand_var ())
+    | _ -> failwith "rand_expr in size <= 1"
+  else
+    match Random.int 6 with
+    | 0 -> Eval (rand_val ())
+    | 1 -> Evar (rand_var ())
+    | 2 -> Eop1 (rand_op1 (), rand_expr (size - 1))
+    | 3 -> Eop2 (rand_op2 (), rand_expr (size / 2), rand_expr (size / 2))
+    | 4 -> Elen (rand_expr (size - 1))
+    | 5 -> Eidx (rand_expr (size / 2), rand_expr (size / 2))
+    | _ -> failwith "rand_expr"
+
+let char_of_digit d =
+  Char.chr (Char.code '0' + d)
+
+let rand_var () =
+  [ 'x'
+  ; char_of_digit (Random.int 10)
+  ]
+
+
+let rec rand_stmt size =
+  if size <= 1 then
+    match Random.int 4 with
+    | 0 -> Snop
+    | 1 -> Sset (rand_var (), rand_expr 7)
+    | 2 -> Salloc (rand_var (), rand_expr 5, rand_expr 5)
+    | 3 -> Sassign (rand_expr 5, rand_expr 5, rand_expr 5)
+    | _ -> failwith "rand_stmt in size <= 1"
+  else
+    match Random.int 7 with
+    | 0 -> Snop
+    | 1 -> Sset (rand_var (), rand_expr 7)
+    | 2 -> Salloc (rand_var (), rand_expr 5, rand_expr 5)
+    | 3 -> Sassign (rand_expr 5, rand_expr 5, rand_expr 5)
+    | 4 -> Sseq (rand_stmt (size / 2), rand_stmt (size / 2))
+    | 5 -> Sifelse (rand_expr 5, rand_stmt (size / 2), rand_stmt (size /2))
+    | 6 -> Swhile (rand_expr 5, rand_stmt (size - 1))
+    | _ -> failwith "rand_stmt"

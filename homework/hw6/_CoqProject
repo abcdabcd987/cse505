@@ -1,0 +1,11 @@
+-R ./frap Frap
+-Q ./ STLC
+StructTactics.v
+Syntax.v
+Subst.v
+Heap.v
+Semantics.v
+Types.v
+Progress.v
+Preservation.v
+HW6.v

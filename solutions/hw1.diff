@@ -1,0 +1,58 @@
+diff -ruN homework/hw1/HW1.v solutions/hw1/HW1.v
+--- homework/hw1/HW1.v	2018-09-26 09:15:14.000000000 -0700
++++ solutions/hw1/HW1.v	2019-01-06 05:07:46.000000000 -0800
+@@ -116,7 +116,11 @@
+  * PROBLEM 1 [25 points]: Write a function isSucc that returns true if
+  * a natural number is a successor of some other number, and false otherwise.
+  *)
+-Definition isSucc (n : nat) := true. (* YOUR CODE HERE *)
++Definition isSucc (n : nat) := 
++  match n with
++  | 0 => false
++  | S p => true
++  end. (* YOUR CODE HERE *)
+ 
+ (* sanity tests: *)
+ Eval compute in isSucc 0. (* should be false *)
+@@ -127,7 +131,13 @@
+  * PROBLEM 2 [25 points]: Write a function isThreeven that returns true if
+  * a natural number is a multiple of three (including zero), and false otherwise.
+  *)
+-Fixpoint isThreeven (n : nat) := true. (* YOUR CODE HERE *)
++Fixpoint isThreeven (n : nat) :=
++  match n with
++  | 0 => true
++  | 1 => false
++  | 2 => false
++  | S (S (S p)) => isThreeven p
++  end. (* YOUR CODE HERE *)
+ 
+ (* sanity tests: *)
+ Eval compute in isThreeven 0. (* should be true *)
+@@ -284,7 +294,10 @@
+     isThreeven (S (S (S n))) = true.
+ Proof.
+ (* YOUR CODE HERE *)
+-Admitted. (* Change to QED when done *)
++  intros.
++  simpl.
++  apply H.
++Qed.
+ 
+ (*
+  * We can prove much richer specifications than this,
+@@ -328,7 +341,13 @@
+     myAdd n 1 = S n.
+ Proof.
+   (* YOUR CODE HERE *)
+-Admitted. (* Change to QED when done *)
++  intros n.
++  induction n.
++  - reflexivity.
++  - simpl.
++    rewrite IHn.
++    reflexivity.
++Qed.
+ 
+ (* --- Summary --- *)
+ 

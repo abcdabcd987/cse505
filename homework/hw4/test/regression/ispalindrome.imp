@@ -1,0 +1,17 @@
+x = read_str();
+i = 0;
+j = len(x) - 1;
+res = True;
+while(i < len(x) / 2) {
+  if(not (x[i] == x[j])) {
+    res = False;
+  }
+  i = i + 1;
+  j = j - 1;
+}
+if(res) {
+  _ = print_val("\nYes, '" + x + "' is a palindrome!\n");
+} else {
+  _ = print_val("\nSorry, '" + x + "' is not a palindrome :(\n");
+}
+return res;

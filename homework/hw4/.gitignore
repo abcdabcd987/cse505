@@ -1,0 +1,11 @@
+.coqdeps.d
+Makefile.coq
+Makefile.coq.conf
+_CoqProject
+
+_build/
+Imp.native
+
+test/bounded/TESTIMP.*
+test/regression/*.input
+test/regression/*.result

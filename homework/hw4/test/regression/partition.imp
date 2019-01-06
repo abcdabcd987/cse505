@@ -1,0 +1,40 @@
+def partition(a, pivot, l, h) {
+  # Partition `a[l:h]` into three chunks: <pivot, =pivot, >pivot
+
+  i = l;
+  while (i < h) {
+    if (a[i] < pivot) {
+      tmp = a[l]; a[l] = a[i]; a[i] = tmp;
+      l = l + 1;
+      i = i + 1;
+    } else {
+      if (a[i] == pivot) {
+        i = i + 1;
+      } else { # a[i] > pivot
+        tmp = a[h - 1]; a[h - 1] = a[i]; a[i] = tmp;
+        h = h - 1;
+      }
+    }
+  }
+  return i;
+}
+
+
+n = read_int();
+
+if (n < 0) {
+   n = -n;
+}
+
+a = alloc(n, 0);
+i = 0;
+while (i < n) {
+  a[i] = n - i;
+  i = i + 1;
+}
+
+_ = partition(a, n / 2, 0, n);
+
+return a;
+
+

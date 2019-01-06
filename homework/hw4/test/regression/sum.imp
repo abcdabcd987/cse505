@@ -1,0 +1,27 @@
+def sum(a) {
+  i = 0;
+  result = 0;
+  while (i < len(a)) {
+    result = result + a[i];
+    i = i + 1;
+  }
+
+  return result;
+}
+
+n = read_int();
+
+if(n < 0) {
+  n = -n;
+}
+
+a = alloc(n, 0);
+i = 0;
+while(i < n) {
+  a[i] = n - i;
+  i = i + 1;
+}
+
+result = sum(a);
+
+return result;

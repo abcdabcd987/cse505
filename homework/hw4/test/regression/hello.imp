@@ -1,0 +1,2 @@
+_ = print_val("Hello World!");
+return 0;

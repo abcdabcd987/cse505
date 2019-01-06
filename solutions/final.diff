@@ -1,0 +1,280 @@
+diff -ruN homework/final/ASCIIRegex.v solutions/final/ASCIIRegex.v
+--- homework/final/ASCIIRegex.v	2018-11-30 12:35:02.000000000 -0800
++++ solutions/final/ASCIIRegex.v	2019-01-06 05:07:00.000000000 -0800
+@@ -99,6 +99,28 @@
+  *     [re] is. 
+  *)
+ Inductive exp_match : string -> reg_exp -> Prop :=
++| MEmpty:
++    exp_match "" EmptyStr
++| MChar: forall x,
++    exp_match (String x "") (Char x)
++| MDot: forall x,
++    exp_match (String x "") Dot
++| MApp: forall s1 re1 s2 re2,
++    exp_match s1 re1 ->
++    exp_match s2 re2 ->
++    exp_match (s1 ++ s2) (App re1 re2)
++| MUnionL: forall re1 re2 s,
++    exp_match s re1 ->
++    exp_match s (Union re1 re2)
++| MUnionR: forall re1 re2 s,
++    exp_match s re2 ->
++    exp_match s (Union re1 re2)
++| MStarEmpty: forall re,
++    exp_match "" (Star re)
++| MStar: forall re s sk,
++    exp_match s (Star re) ->
++    exp_match sk re ->
++    exp_match (sk ++ s) (Star re)
+ . (* YOUR CODE HERE *)
+ 
+ (*
+@@ -256,7 +278,18 @@
+     exists s0 s1, s = s0 ++ s1 /\ String a s0 =~ re0 /\ s1 =~ re1.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  intros.
++  split.
++  - intros. inversion H; subst.
++    destruct s1. simplify. left. first_order.
++    destruct re0; inversion H0; subst; right; exists s1; exists s2; first_order.
++  - intros. destruct H.
++    + first_order.
++      pose proof (MApp "" re0 (String a s) re1 H H0). equality.
++    + destruct H. destruct H. first_order.
++      pose proof (MApp (String a x) re0 x0 re1 H0 H1).
++      subst. equality.
++Qed. (* CHANGE TO QED *)
+ 
+ (* 
+  * [s] matches [Union re0 re1] iff [s] matches [re0] or [s] matches [re1]. 
+@@ -274,6 +307,17 @@
+     + apply MUnionR. apply H. 
+ Qed.
+ 
++Lemma string_append_empty:
++  forall (s : string),
++    s = s ++ "".
++Proof.
++  induct s.
++  - equality.
++  - simplify.
++    rewrite <-IHs.
++    reflexivity.
++Qed.
++
+ (* 
+  * Problem 3 [10 points, ~25 tactics]: Prove star_ne, which shows that 
+  * [String a s] matches [Star re]  iff [s = s0 ++ s1], where [String a s0] 
+@@ -292,7 +336,16 @@
+     exists s0 s1, s = s0 ++ s1 /\ String a s0 =~ re /\ s1 =~ Star re.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  split.
++  - intros. induct H. destruct sk.
++    + eapply IHexp_match1; eauto.
++    + simplify. inversion x; subst; clear x.
++      exists sk, s0. first_order.
++  - intros. destruct H. destruct H.
++    first_order. subst.
++    assert (String a (x ++ x0) = String a x ++ x0). equality.
++    rewrite H. econstructor; eauto.
++Qed. (* CHANGE TO QED *)
+ 
+ (* --- Part 3: Matching the Empty String [2 problems, 20 points] --- *)
+ 
+@@ -310,7 +363,13 @@
+  * regex matches the empty string.
+  *)
+ Fixpoint match_eps (re: reg_exp) : bool :=
+-  true. (* YOUR CODE HERE *)
++  match re with
++  | EmptyStr => true
++  | App x y => andb (match_eps x) (match_eps y)
++  | Union x y => orb (match_eps x) (match_eps y)
++  | Star _ => true
++  | _ => false
++  end. (* YOUR CODE HERE *)
+ 
+ (* 
+  * Problem 5 [15 points, ~50 tactics]: Prove match_eps_refl, which shows that 
+@@ -320,7 +379,32 @@
+   refl_matches_eps match_eps.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  unfold refl_matches_eps.
++  split.
++  - intros.
++    induct H.
++    + equality.
++    + destruct s1. 2: inversion x.
++      destruct s2. 2: inversion x.
++      simplify. first_order. rewrite H1. rewrite H2. equality.
++    + simplify. first_order. rewrite H0. equality.
++    + simplify. first_order. rewrite H0. apply orb_true_r.
++    + equality.
++    + equality.
++  - intros.
++    induct re.
++    + inversion H.
++    + constructor.
++    + inversion H.
++    + inversion H.
++    + inversion H. apply andb_true_iff in H1. first_order.
++      assert ("" = "" ++ ""). simplify. reflexivity.
++      rewrite H4. econstructor; eauto.
++    + inversion H. apply orb_true_iff in H1. destruct H1.
++      * first_order. econstructor; eauto.
++      * first_order. eapply MUnionR; eauto.
++    + constructor.
++Qed. (* CHANGE TO QED *)
+ 
+ (*
+  * We'll define other functions that use [match_eps]. However, the only 
+@@ -371,7 +455,18 @@
+  * are equal.
+  *)
+ Fixpoint derive (a : ascii) (re : reg_exp) : reg_exp :=
+-  EmptySet. (* YOUR CODE HERE *)
++  match re with
++  | EmptySet => EmptySet
++  | EmptyStr => EmptySet
++  | Char c => if ascii_dec a c then EmptyStr else EmptySet
++  | Dot => EmptyStr
++  | App re1 re2 => match match_eps re1 with
++                   | true  => Union (derive a re2) (App (derive a re1) re2)
++                   | false => App (derive a re1) re2
++                   end
++  | Union re1 re2 => Union (derive a re1) (derive a re2)
++  | Star re1 => App (derive a re1) (Star re1)
++  end. (* YOUR CODE HERE *)
+ 
+ (*
+  * [derive] should pass the following tests. Each test establishes an
+@@ -427,13 +522,39 @@
+   "c" =~ (derive c (Star (Char c))).
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  simplify.
++  assert ("c" = "" ++ "c"). apply string_append_empty.
++  rewrite H; clear H. constructor.
++  + constructor.
++  + pose proof (MStar (Char c) "" "c").
++    specialize (H (MStarEmpty (Char c))).
++    specialize (H (MChar c)).
++    equality.
++Qed. (* CHANGE TO QED *)
+ 
+ Example test_der9 :
+   "c" =~ (derive c (App (Star (Char c)) (Char c))).
+ Proof. 
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  simplify.
++  apply MUnionR.
++  assert ("c" = "" ++ "c"). apply string_append_empty.
++  rewrite H; clear H. constructor.
++  + assert ("" = "" ++ ""). equality.
++    rewrite H; clear H. constructor.
++    - constructor.
++    - constructor.
++  + constructor.
++Qed. (* CHANGE TO QED *)
++
++Lemma two_empty_string_append :
++  forall s1 s2,
++    s1 ++ s2 = "" -> s1 = "" /\ s2 = "".
++Proof.
++  induct s1.
++  - simplify. first_order.
++  - simplify. inversion H.
++Qed.
+ 
+ (*
+  * Problem 7 [20 points, ~125 tactics]: Prove derive_corr, which shows that 
+@@ -456,7 +577,51 @@
+   derives derive.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  unfold derives. unfold is_der. split.
++  - induct re; simplify.
++    + inversion H.
++    + inversion H.
++    + inversion H; subst.
++      cases (ascii_dec a0 a0). 2: congruence.
++      econstructor; eauto.
++    + inversion H; subst. econstructor; eauto.
++    + apply app_ne in H. destruct_match_eps re1.
++      * first_order.
++        { apply MUnionL. apply IHre2. assumption. }
++        { apply MUnionR. subst. constructor. eapply IHre1; eauto. assumption. }
++      * first_order.
++        { congruence. }
++        { subst. constructor. eapply IHre1; eauto. assumption. }
++    + apply union_disj in H. first_order.
++      * apply MUnionL. eapply IHre1; eauto.
++      * apply MUnionR. eapply IHre2; eauto.
++    + apply star_ne in H. first_order. subst. constructor.
++      * eapply IHre; eauto.
++      * assumption.
++  - induct re; simplify.
++    + inversion H.
++    + inversion H.
++    + cases (ascii_dec a a0).
++      * inversion H; subst. econstructor; eauto.
++      * inversion H.
++    + inversion H; subst. econstructor; eauto.
++    + destruct_match_eps re1.
++      * apply union_disj in H. first_order.
++        { assert (String a s = "" ++ String a s). equality. rewrite H2.
++          constructor. assumption. eapply IHre2; eauto. }
++        { apply app_exists in H. first_order. subst.
++          assert (String a (x ++ x0) = String a x ++ x0). equality. rewrite H.
++          constructor. eapply IHre1; eauto. assumption. }
++      * apply app_exists in H. first_order. subst.
++        assert (String a (x ++ x0) = String a x ++ x0). equality. rewrite H.
++        constructor. eapply IHre1; eauto. assumption.
++    + apply union_disj in H. first_order.
++      * apply MUnionL. eapply IHre1; eauto.
++      * apply MUnionR. eapply IHre2; eauto.
++    + apply app_exists in H. first_order. subst.
++      assert (String a (x ++ x0) = String a x ++ x0). equality. rewrite H.
++      constructor. assumption. eapply IHre; eauto.
++Qed. (* CHANGE TO QED *)
+ 
+ (*
+  * We'll define the regex matcher using [derive]. However, the only
+@@ -483,7 +648,10 @@
+  * can be useful.
+  *)
+ Fixpoint regex_match (s : string) (re : reg_exp) : bool :=
+-  true. (* YOUR CODE HERE *)
++  match s with
++  | EmptyString => match_eps re
++  | String a s0 => regex_match s0 (derive a re)
++  end. (* YOUR CODE HERE *)
+ 
+ (*
+  * Problem 9 [10 points, ~10 tactics]: Finally, prove regex_refl, 
+@@ -495,7 +663,14 @@
+   matches_regex regex_match.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  unfold matches_regex. split.
++  - induct s.
++    + simplify. eapply match_eps_refl; eauto.
++    + simplify. apply IHs. eapply derive_corr; eauto.
++  - induct s.
++    + simplify. eapply match_eps_refl; eauto.
++    + simplify. apply derive_corr. eapply IHs; eauto.
++Qed. (* CHANGE TO QED *)
+ 
+ (* ---  Using with the regex matcher --- *)
+ 

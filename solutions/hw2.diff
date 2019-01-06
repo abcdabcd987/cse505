@@ -1,0 +1,236 @@
+diff -ruN homework/hw2/HW2.v solutions/hw2/HW2.v
+--- homework/hw2/HW2.v	2018-10-02 17:45:32.000000000 -0700
++++ solutions/hw2/HW2.v	2019-01-06 05:07:42.000000000 -0800
+@@ -1,4 +1,8 @@
+ (** * CSE505 - HW2 *)
++(*
++ * Partner 1: Ashlie Martinez
++ * Partner 2: Lequn Chen
++ *)
+ 
+ (*
+  * Throughout, we include the approximate lines of code (LOC) or number of tactics
+@@ -38,7 +42,10 @@
+    Hint: You may want to use the string `append` function, which
+    has the notation ++. *)
+ Fixpoint repeat (s : string) (n : nat) : string :=
+-  "". (* your code here *)
++  match n with
++  | 0 => EmptyString
++  | S p => s ++ repeat s p
++  end.
+ 
+ (*
+  * Tests for problem 1:
+@@ -46,27 +53,34 @@
+ Theorem repeatTest1:
+   repeat "foo" 3 = "foofoofoo".
+ Proof.
+-  (* your code here *)
+-Admitted. (* change to QED *)
++  simpl.
++  equality.
++Qed. (* change to QED *)
+ 
+ Theorem repeatTest2:
+   forall s, repeat s 0 = "".
+ Proof.
+-  (* your code here *)
+-Admitted. (* change to QED *)
++  intros.
++  simpl.
++  equality.
++Qed. (* change to QED *)
+ 
+ Theorem repeatTest3:
+   repeat "bar" 1 = "bar".
+ Proof.
+-  (* your code here *)
+-Admitted. (* change to QED *)
++  simpl.
++  equality.
++Qed. (* change to QED *)
+ 
+ (* Problem 2 [10 points, ~5 LOC]: Write a function `reverse` that reverses a string.
+  *
+  * Hint: The list reverse function `rev` might be a helpful reference.
+  *)
+ Fixpoint reverse (s : string) : string :=
+-  "". (* your code here *)
++  match s with
++  | EmptyString => EmptyString
++  | String x s' => (reverse s') ++ String x EmptyString
++  end.
+ 
+ (*
+  * Tests for problem 2:
+@@ -74,14 +88,16 @@
+ Theorem revTest1:
+   reverse "cse505" = "505esc".
+ Proof.
+-  (* your code here *)
+-Admitted. (* change to QED *)
++  simpl.
++  equality.
++Qed. (* change to QED *)
+ 
+ Theorem revTest2:
+   reverse "" = "".
+ Proof.
+-  (* your code here *)
+-Admitted. (* change to QED *)
++  simpl.
++  equality.
++Qed. (* change to QED *)
+ 
+ (*
+  * We will now define what it means to run a program.
+@@ -95,7 +111,12 @@
+  * may be useful (but it is OK if you do not use them).
+  *)
+ Fixpoint run (p : Prog) : string :=
+-  "". (* your code here *)
++  match p with
++  | Const s => s
++  | Add p1 p2 => (run p1) ++ (run p2)
++  | Mul p1 n => repeat (run p1) n
++  | Rev p1 => reverse (run p1)
++  end.
+ 
+ (*
+  * Tests for problem 3:
+@@ -103,20 +124,23 @@
+ Theorem run_Example1:
+   run (Const "foo") = "foo".
+ Proof.
+-  (* your code here *)
+-Admitted.
++  simpl.
++  equality.
++Qed.
+ 
+ Theorem run_Example2:
+   run (Add (Const "1") (Const "2")) = "12".
+ Proof.
+-  (* your code here *)
+-Admitted.
++  simpl.
++  equality.
++Qed.
+ 
+ Theorem run_Example3:
+   run (Rev (Mul (Const "12") 3)) = "212121".
+ Proof.
+-  (* your code here *)
+-Admitted.
++  simpl.
++  equality.
++Qed.
+ 
+ (* Next, we can prove some properties about the running the program.
+  * We will prove that running a program preserves the length of the expressions.
+@@ -138,8 +162,14 @@
+   forall s1 s2,
+     String.length (s1 ++ s2) = String.length s1 + String.length s2.
+ Proof.
+-  (* your code here *)
+-Admitted. (* change to QED *)
++  induct s1.
++  - simpl.
++    equality.
++  - simpl.
++    intros s2.
++    rewrite IHs1.
++    f_equal.
++Qed. (* change to QED *)
+ 
+ (*
+  * Problem 5 [10 points, ~6 tactics]: Prove that the length of repeating a string n times
+@@ -149,8 +179,14 @@
+   forall s n,
+     String.length (repeat s n) = n * String.length s.
+ Proof.
+-  (* your code here *)
+-Admitted. (* change to QED *)
++  induct n.
++  - simpl.
++    equality.
++  - simpl.
++    rewrite len_app_plus.
++    rewrite IHn.
++    equality.
++Qed. (* change to QED *)
+ 
+ (*
+  * Problem 6 [10 points, ~8 tactics]: Prove that the length of reversing a string is the
+@@ -162,8 +198,15 @@
+   forall s,
+     String.length (reverse s) = String.length s.
+ Proof.
+-  (* your code here *)
+-Admitted. (* change to QED *)
++  induct s.
++  - simpl.
++    equality.
++  - simpl.
++    rewrite len_app_plus.
++    rewrite IHs.
++    simpl.
++    ring.
++Qed. (* change to QED *)
+ 
+ (*
+  * With one more definition, we can define and prove the theorem:
+@@ -188,8 +231,20 @@
+   forall p,
+     String.length (run p) = sub_len p.
+ Proof.
+-  (* your code here *)
+-Admitted. (* change to QED *)
++  induct p.
++  - simpl.
++    equality.
++  - simpl.
++    rewrite len_app_plus.
++    equality.
++  - simpl.
++    rewrite len_repeat.
++    equality.
++  - simpl.
++    rewrite len_rev.
++    rewrite IHp.
++    equality.
++Qed. (* change to QED *)
+ 
+ (* --- Part 2: A common problem in Coq --- *)
+ 
+@@ -254,12 +309,26 @@
+  * (or you can use the ring tactic).
+  *)
+ 
+-(* your lemma here *)
++Lemma sum_tail_lemma :
++  forall l a,
++    sum_tail' l a = a + sum l.
++Proof.
++  induct l.
++  - intros a.
++    simpl.
++    ring.
++  - intros a0.
++    simpl.
++    rewrite IHl.
++    ring.
++Qed.
+ 
+ Theorem sum_tail_correct :
+   forall l,
+     sum_tail l = sum l.
+ Proof.
+-  (* your code here *)
+-Admitted. (* Change to Qed *)
++  intros l.
++  unfold sum_tail.
++  apply sum_tail_lemma.
++Qed. (* Change to Qed *)
+ 

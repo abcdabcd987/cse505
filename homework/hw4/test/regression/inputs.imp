@@ -1,0 +1,12 @@
+i1 = read_int();
+i2 = read_int();
+b1 = read_bool();
+b2 = read_bool();
+
+if(b1 and b2) {
+  result = i1;
+} else {
+  result = i2;
+}
+
+return result;

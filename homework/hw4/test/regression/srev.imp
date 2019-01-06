@@ -1,0 +1,8 @@
+x = read_str();
+y = "";
+i = 0;
+while(i < len(x)) {
+  y = x[i] + y;
+  i = i + 1;
+}
+return y;

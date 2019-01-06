@@ -1,0 +1,215 @@
+diff -ruN homework/hw3/HW3.v solutions/hw3/HW3.v
+--- homework/hw3/HW3.v	2018-10-10 07:56:22.000000000 -0700
++++ solutions/hw3/HW3.v	2019-01-06 05:07:34.000000000 -0800
+@@ -1,4 +1,5 @@
+ (** * CSE505 HW3: ADTs *)
++(* Lequn Chen & Zihou (Paul) Gao *)
+ 
+ Require Import Frap.
+ 
+@@ -142,14 +143,17 @@
+    *
+    * Hint: The boolean equality function s.equal will be helpful here.
+    *)
+-  Definition find {val : Set} (k : key) (l : t val) : option val :=
+-    None. (* YOUR CODE HERE *)
++  Fixpoint find {val : Set} (k : key) (l : t val) : option val :=
++    match l with
++    | [] => None
++    | (k0, v0) :: l0 => if s.equal k0 k then Some v0 else find k l0
++    end. (* YOUR CODE HERE *)
+ 
+   (*
+    * Problem 2 [5 points, ~2 LOC]: Implement the add function.
+    *)
+   Definition add {val : Set} (k : key) (v : val) (l : t val) : t val :=
+-    l. (* YOUR CODE HERE *)
++    (k, v) :: l. (* YOUR CODE HERE *)
+ 
+   (*
+    * Problem 3 [5 points, ~5 LOC]: Implement the remove function.
+@@ -157,7 +161,10 @@
+    * Hint: The boolean equality function s.equal will be helpful here.
+    *)
+   Fixpoint remove {val : Set} (k : key) (l : t val) : t val :=
+-    l. (* YOUR CODE HERE *)
++    match l with
++    | [] => nil
++    | (k0, v0) :: l0 => if s.equal k0 k then l0 else (k0, v0) :: (remove k l0)
++    end. (* YOUR CODE HERE *)
+ 
+   (* --- Specifications for basic operations --- *)
+ 
+@@ -169,7 +176,9 @@
+       @find val k empty = None.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    reflexivity.
++  Qed. (* CHANGE TO QED *)
+ 
+   (*
+    * Problem 5 [10 points, ~10 tactics]: Prove find_add.
+@@ -182,7 +191,10 @@
+       @find val k (add k v l) = Some v.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    pose proof (s.equal_ok k k).
++    cases (s.equal k k); propositional.
++  Qed. (* CHANGE TO QED *)
+ 
+   (*
+    * Problem 6 [5 points, ~2 tactics]: Prove remove_empty.
+@@ -192,7 +204,9 @@
+       @remove val k empty = empty.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    equality.
++  Qed. (* CHANGE TO QED *)
+ 
+   (*
+    * Problem 7 [10 points, ~10 tactics]: Prove remove_add.
+@@ -202,7 +216,10 @@
+       @remove val k (add k v l) = l.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    pose proof (s.equal_ok k k).
++    cases (s.equal k k); propositional.
++  Qed. (* CHANGE TO QED *)
+ 
+   (*
+    * Problem 8 [15 points, ~15 tactics]: Prove remove_not_found.
+@@ -213,7 +230,17 @@
+       @remove val k l = l.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    induct l.
++    - simplify.
++      reflexivity.
++    - simplify.
++      destruct a.
++      cases (s.equal k0 k).
++      + equality.
++      + pose proof (IHl H).
++        equality.
++  Qed. (* CHANGE TO QED *)
+ 
+ End AssociationList.
+ 
+@@ -265,7 +292,12 @@
+       adjacent v empty = [].
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    unfold adjacent.
++    unfold empty.
++    pose proof (@m.find_empty (list s.t) v).
++    cases (@m.find (list s.t) v m.empty); equality.
++  Qed. (* CHANGE TO QED *)
+ 
+   (*
+    * Problem 10 [5 points, ~5 tactics]: Prove adjacent_add.
+@@ -275,7 +307,12 @@
+       adjacent v1 (add_adjacent v1 v2s g) = v2s.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    unfold add_adjacent.
++    unfold adjacent.
++    pose proof (m.find_add v1 v2s g).
++    cases (m.find v1 (m.add v1 v2s g)); equality.
++  Qed. (* CHANGE TO QED *)
+ 
+   (*
+    * Problem 11 [5 points, ~3 tactics]: Prove remove_empty.
+@@ -285,7 +322,12 @@
+       remove_adjacent v empty = empty.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    unfold empty.
++    unfold remove_adjacent.
++    pose proof (@m.remove_empty (list s.t) v).
++    equality.
++  Qed. (* CHANGE TO QED *)
+ 
+   (*
+    * Problem 12 [5 points, ~2 tactics]: Prove remove_add_adjacent.
+@@ -295,7 +337,12 @@
+       remove_adjacent v1 (add_adjacent v1 v2s g) = g.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    unfold add_adjacent.
++    unfold remove_adjacent.
++    pose proof (m.remove_add v1 v2s g).
++    equality.
++  Qed. (* CHANGE TO QED *)
+ 
+   (* --- BONUS PROBLEM --- *)
+ 
+@@ -343,7 +390,35 @@
+       exists a, In a wl /\ Reachable g a b.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    induct n.
++    - simplify.
++      inversion H.
++    - cases wl.
++      + simplify.
++        inversion H.
++      + simplify.
++        pose proof (s.equal_ok t b).
++        cases (s.equal t b).
++        * exists b.
++          refine (conj _ _).
++          ** equality.
++          ** exact (ReachRefl g b).
++        * apply IHn in H.
++          destruct H.
++          destruct H.
++          apply in_app_or in H.
++          destruct H.
++          ** exists x.
++             refine (conj _ _).
++             ++ equality.
++             ++ exact H1.
++          ** exists t.
++             refine (conj _ _).
++             ++ equality.
++             ++ pose (ReachTrans g t x b).
++                exact (r H H1).
++  Qed. (* CHANGE TO QED *)
+ 
+   (*
+    * BONUS [5 points, ~10 tactics]: Using reachable'_Reachable,
+@@ -355,6 +430,13 @@
+       Reachable g a b.
+   Proof.
+     (* YOUR PROOF HERE *)
+-  Admitted. (* CHANGE TO QED *)
++    simplify.
++    apply reachable'_Reachable in H.
++    destruct H.
++    destruct H.
++    cases H.
++    + equality.
++    + inversion H.
++  Qed. (* CHANGE TO QED *)
+ 
+ End Graph.

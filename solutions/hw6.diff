@@ -1,0 +1,508 @@
+diff -ruN homework/hw6/HW6.v solutions/hw6/HW6.v
+--- homework/hw6/HW6.v	2018-11-13 15:25:46.000000000 -0800
++++ solutions/hw6/HW6.v	2019-01-06 05:07:06.000000000 -0800
+@@ -1,3 +1,5 @@
++(* Lequn Chen & Victor Zhong *)
++
+ (* --- CSE505 HW6: Type Soundness in Call-by-value, Simply-typed Lambda Calculus with References --- *)
+ 
+ Require Import List.
+@@ -544,7 +546,13 @@
+       (exists e'' h'', h'; e' ==> h''; e'') \/ isValue e'.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1; simplify.
++  + eapply progress; eauto.
++  + pose proof (typed_E0_closed ht e1 t H2).
++    pose proof (preservation h1 h2 e1 e2 H H4 ht t H3 H2).
++    destruct H5.
++    first_order.
++Qed. (* CHANGE TO QED *)
+ 
+ (* 
+  * Now, prove that terms which are well-typed in the empty heap 
+@@ -557,5 +565,8 @@
+     (exists e'' h'', h'; e' ==> h''; e'') \/ isValue e'.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  simplify.
++  pose proof empty_heap_typed.
++  eapply soundness'; eauto.
++Qed. (* CHANGE TO QED *)
+ (* END PROBLEM 10 *)
+diff -ruN homework/hw6/Heap.v solutions/hw6/Heap.v
+--- homework/hw6/Heap.v	2018-11-13 15:25:46.000000000 -0800
++++ solutions/hw6/Heap.v	2019-01-06 05:07:08.000000000 -0800
+@@ -125,4 +125,13 @@
+ Proof.
+   unfold lookup. induct a1; intros.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  * simplify.
++    cases h.
++    + equality.
++    + simplify.
++      break_match; auto.
++      equality.
++  * cases h; auto.
++    simplify.
++    cases a2; auto.
++Qed. (* CHANGE TO QED *)
+diff -ruN homework/hw6/Preservation.v solutions/hw6/Preservation.v
+--- homework/hw6/Preservation.v	2018-11-13 15:25:46.000000000 -0800
++++ solutions/hw6/Preservation.v	2019-01-06 05:07:08.000000000 -0800
+@@ -111,7 +111,13 @@
+       typed env2 ht e t.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1; simplify; econstructor; eauto.
++  + specialize (H0 x).
++    equality.
++  + eapply (IHtyped (extend env2 x tA)).
++    eapply env_equiv_extend.
++    assumption.
++Qed. (* CHANGE TO QED *)
+ (* END PROBLEM 5 *)
+ 
+ (*
+@@ -139,7 +145,75 @@
+       typed (extend env x t') ht e t.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1; simplify.
++  * econstructor; eauto.
++  * econstructor; eauto.
++  * econstructor; eauto.
++    unfold extend.
++    cases (string_dec x x0).
++    + subst.
++      pose proof (FreeVar x0).
++      equality.
++    + equality.
++  * assert (~ free e1 x).
++    + unfold not.
++      intros.
++      pose proof (FreeApp_l x e1 e2 H2).
++      equality.
++    + assert (~ free e2 x).
++      - unfold not.
++        intros.
++        pose proof (FreeApp_r x e1 e2 H3).
++        equality.
++      - specialize (IHtyped1 x t' H2).
++        specialize (IHtyped2 x t' H3).
++        econstructor; eauto.
++  * econstructor; eauto.
++    case (string_dec x x0); intros.
++    + subst.
++      eapply env_equiv_typed; eauto.
++      eapply env_equiv_sym; eauto.
++      eapply env_equiv_overwrite; eauto.
++    + assert (~ free e x0).
++      - unfold not.
++        intros.
++        pose proof (FreeLam x0 x e H1 (not_eq_sym n)).
++        equality.
++      - specialize (IHtyped x0 t' H1).
++        eapply env_equiv_typed; eauto.
++        eapply env_equiv_neq; eauto.
++        equality.
++  * econstructor; eauto.
++  * econstructor; eauto.
++    assert (~ free e x).
++    + unfold not.
++      intros.
++      pose proof (FreeRef x e H1).
++      equality.
++    + specialize (IHtyped x t' H1).
++      assumption.
++  * econstructor; eauto.
++    assert (~ free e x).
++    + unfold not.
++      intros.
++      pose proof (FreeDeref x e H1).
++      equality.
++    + specialize (IHtyped x t' H1).
++      equality.
++  * assert (~ free e1 x).
++    + unfold not.
++      intros.
++      pose proof (FreeAssign_l x e1 e2 H2).
++      equality.
++    + assert (~ free e2 x).
++      - unfold not.
++        intros.
++        pose proof (FreeAssign_r x e1 e2 H3).
++        equality.
++      - specialize (IHtyped1 x t' H2).
++        specialize (IHtyped2 x t' H3).
++        econstructor; eauto.
++Qed. (* CHANGE TO QED *)
+ (* END PROBLEM 6 *)
+ 
+ (* Next, we'll define another notion of equivalence: equivalence of
+@@ -271,7 +345,41 @@
+       typed env ht e3 tB.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1; simplify.
++  - inversion H0; subst.
++    econstructor; eauto.
++  - inversion H0; subst.
++    econstructor; eauto.
++  - inversion H0; subst.
++    unfold extend in H5.
++    cases (string_dec x x); equality.
++  - inversion H1; subst.
++    unfold extend in H6.
++    cases (string_dec x1 x2); try equality.
++    econstructor; eauto.
++  - inversion H2; subst; clear H2.
++    econstructor; eauto.
++  - inversion H0; subst; clear H0.
++    econstructor; eauto.
++    pose proof (env_equiv_overwrite env x tA tA0).
++    eapply env_equiv_typed; eauto.
++  - inversion H2; subst; clear H2.
++    econstructor; eauto.
++    pose proof (IHSubst H1 (extend env x1 tA0) ht tA tB0).
++    apply H2.
++    + eapply env_equiv_typed; eauto.
++      eapply env_equiv_neq; eauto.
++      equality.
++    + eapply weaken; eauto.
++  - inversion H0; subst; clear H0.
++    econstructor; eauto.
++  - inversion H1; subst; clear H1.
++    econstructor; eauto.
++  - inversion H1; subst; clear H1.
++    econstructor; eauto.
++  - inversion H2; subst; clear H2.
++    econstructor; eauto.
++Qed. (* CHANGE TO QED *)
+ (* END PROBLEM 7 *)
+ 
+ (** We're almost there. The last thing we'll need to do is to provide
+@@ -318,7 +426,22 @@
+     lookup_typ h' a = lookup_typ h a.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  intros h h' a.
++  revert h h'.
++  induct a; simplify.
++  - inversion H0; subst.
++    + simplify.
++      inversion H.
++    + inversion H; subst; equality.
++  - inversion H0; subst; simplify.
++    + inversion H.
++    + assert (lookup_typ h'0 a = lookup_typ h0 a).
++      * apply IHa.
++        -- omega.
++        -- assumption.
++      * unfold lookup_typ in *.
++        equality.
++Qed. (* CHANGE TO QED *)
+ (* END PROBLEM 8 *)
+ 
+ (* Extending a heap increases its length *)
+@@ -402,5 +525,135 @@
+         heap_typed ht' h'.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1; simplify.
++  * inversion H2; subst.
++    pose proof (closed_app_inv e1 e2 H0).
++    destruct H3.
++    specialize (IHstep_cbv H3 ht (tA ~> t) H1 H7).
++    destruct IHstep_cbv.
++    destruct H5.
++    destruct H6.
++    exists x.
++    first_order.
++    econstructor; eauto.
++    eapply heap_weakening; eauto.
++  * inversion H3; subst.
++    pose proof (closed_app_inv e1 e2 H1).
++    destruct H4.
++    specialize (IHstep_cbv H5 ht tA H2 H10).
++    destruct IHstep_cbv.
++    exists x.
++    first_order.
++    econstructor; eauto.
++    eapply heap_weakening; eauto.
++  * inversion H3; subst.
++    pose proof (closed_app_inv (\ x, e1) e2 H1).
++    destruct H4.
++    exists ht.
++    pose proof (extends_refl ht).
++    first_order.
++    inversion H8; subst.
++    eapply subst_pres_typed; eauto.
++  * inversion H2; subst.
++    pose proof (closed_ref_inv e H0).
++    specialize (IHstep_cbv H3 ht t0 H1 H6).
++    destruct IHstep_cbv.
++    exists x.
++    first_order.
++    econstructor; eauto.
++  * inversion H2; subst.
++    pose proof (closed_ref_inv e H0).
++    exists (snoc ht t0).
++    first_order.
++    + eapply extends_snoc; eauto.
++    + assert (length h < length (snoc ht t0)).
++      - rewrite H1.
++        pose proof (length_snoc typ ht t0).
++        rewrite H5.
++        apply Nat.lt_succ_diag_r.
++      - pose proof (WTAddr E0 (snoc ht t0) (length h) H5).
++        assert (lookup_typ (snoc ht t0) (length h) = t0).
++        ++ unfold lookup_typ.
++           rewrite H1.
++           apply nth_eq_snoc.
++        ++ rewrite H8 in H7.
++           assumption.
++    + pose proof (length_snoc expr h e).
++      pose proof (length_snoc typ ht t0).
++      rewrite H5.
++      rewrite H7.
++      equality.
++    + unfold lookup in *.
++      unfold lookup_typ in *.
++      cases (Nat.eq_dec a (length h)).
++      - rewrite e0 in *.
++        pose proof (nth_eq_snoc expr h e true).
++        rewrite H7.
++        pose proof (nth_eq_snoc typ ht t0 TBool).
++        rewrite <-H1 in H8.
++        rewrite H8.
++        eapply heap_weakening; eauto.
++        eapply extends_snoc; eauto.
++      - pose proof (length_snoc expr h e).
++        rewrite H7 in H5.
++        assert (a < length h); try omega.
++        specialize (H4 a H8).
++        pose proof (nth_lt_snoc expr h e true a H8).
++        rewrite <- H9.
++        rewrite H1 in H8.
++        pose proof (nth_lt_snoc typ ht t0 TBool a H8).
++        rewrite <- H10.
++        eapply heap_weakening; eauto.
++        eapply extends_snoc; eauto.
++  * inversion H2; subst.
++    pose proof (closed_deref_inv e H0).
++    specialize (IHstep_cbv H3 ht (TRef t) H1 H6).
++    destruct IHstep_cbv.
++    exists x.
++    first_order.
++    econstructor; eauto.
++  * inversion H2; subst.
++    pose proof (extends_refl ht).
++    inversion H6; subst.
++    exists ht.
++    first_order.
++  * inversion H2; subst.
++    pose proof (closed_assign_inv e1 e2 H0).
++    destruct H3.
++    specialize (IHstep_cbv H3 ht (TRef t0) H1 H7).
++    destruct IHstep_cbv.
++    exists x.
++    first_order.
++    econstructor; eauto.
++    eapply heap_weakening; eauto.
++  * inversion H3; subst.
++    pose proof (closed_assign_inv e1 e2 H1).
++    destruct H4.
++    specialize (IHstep_cbv H5 ht t0 H2 H10).
++    destruct IHstep_cbv.
++    exists x.
++    first_order.
++    econstructor; eauto.
++    eapply heap_weakening; eauto.
++  * inversion H3; subst.
++    inversion H8; subst.
++    exists ht.
++    first_order.
++    + eapply extends_refl; eauto.
++    + econstructor; eauto.
++    + rewrite <-H2.
++      eapply length_replace; eauto.
++    + pose proof (length_replace expr h a e).
++      rewrite H6 in H5.
++      rewrite <-H2 in H9.
++      specialize (H4 a0 H5).
++      cases (Nat.eq_dec a a0).
++      - pose proof (lookup_replace_eq h a e H9).
++        rewrite <-e0 in *.
++        rewrite H7.
++        assumption.
++      - pose proof (lookup_replace_neq a a0 e h n).
++        rewrite H7.
++        assumption.
++Qed. (* CHANGE TO QED *)
+ (* END PROBLEM 9 *)
+\ No newline at end of file
+diff -ruN homework/hw6/Progress.v solutions/hw6/Progress.v
+--- homework/hw6/Progress.v	2018-11-13 15:25:46.000000000 -0800
++++ solutions/hw6/Progress.v	2019-01-06 05:07:08.000000000 -0800
+@@ -80,5 +80,79 @@
+   remember E0.
+   induction 1; subst; intros.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  * right.
++    econstructor.
++  * right.
++    econstructor.
++  * inversion H.
++  * left.
++    specialize (IHtyped2 (eq_refl E0) H1).
++    specialize (IHtyped1 (eq_refl E0) H1).
++    destruct IHtyped1.
++    + destruct H2.
++      destruct H2.
++      exists (x @ e2).
++      exists x0.
++      apply SAppLeft; auto.
++    + pose proof (canon_fun E0 ht e1 tA tB H2 H).
++      destruct H3.
++      destruct H3.
++      destruct IHtyped2.
++      - destruct H4.
++        destruct H4.
++        exists (e1 @ x1).
++        exists x2.
++        apply SAppRight; auto.
++      - pose proof (can_subst x0 e2 x).
++        destruct H5.
++        subst.
++        exists x1.
++        exists h.
++        apply SApp; auto.
++  * right.
++    econstructor.
++  * right.
++    econstructor.
++  * left.
++    specialize (IHtyped (eq_refl E0) H0).
++    destruct IHtyped.
++    + destruct H1.
++      destruct H1.
++      eexists.
++      eexists.
++      econstructor.
++      eauto.
++    + eexists.
++      eexists.
++      eapply SRefValue.
++      eauto.
++  * left.
++    specialize (IHtyped (eq_refl E0) H0).
++    destruct IHtyped.
++    + destruct H1. destruct H1.
++      eexists. eexists. econstructor. eauto.
++    + pose proof (canon_ref E0 ht e t H1 H).
++      destruct H2; subst.
++      exists (lookup h x).
++      exists h.
++      eapply SDerefAddr.
++      inversion H; subst.
++      inversion H0.
++      equality.
++  * left.
++    specialize (IHtyped2 (eq_refl E0) H1).
++    specialize (IHtyped1 (eq_refl E0) H1).
++    destruct IHtyped1.
++    + destruct H2. destruct H2.
++      eexists. eexists. econstructor. eauto.
++    + destruct IHtyped2.
++      - destruct H3. destruct H3.
++        eexists. eexists. eapply SAssignRight; eauto.
++      - pose proof (canon_ref E0 ht e1 t H2 H).
++        destruct H4; subst.
++        eexists. eexists. eapply SAssign; eauto.
++        inversion H; subst.
++        inversion H1; subst.
++        equality.
++Qed. (* CHANGE TO QED *)
+ (* END PROBLEM 4 *)
+\ No newline at end of file
+diff -ruN homework/hw6/Subst.v solutions/hw6/Subst.v
+--- homework/hw6/Subst.v	2018-11-13 15:25:46.000000000 -0800
++++ solutions/hw6/Subst.v	2019-01-06 05:07:06.000000000 -0800
+@@ -112,7 +112,32 @@
+       e3 = e3'.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1; simplify.
++  * inversion H; subst; clear H; equality.
++  * inversion H; subst; clear H; equality.
++  * inversion H; subst; clear H; equality.
++  * inversion H0; subst; clear H0; equality.
++  * inversion H1; subst; clear H1.
++    specialize (IHSubst1 e1'0).
++    specialize (IHSubst2 e2'0).
++    equality.
++  * inversion H; subst; clear H; equality.
++  * inversion H1; subst; clear H1.
++    + equality.
++    + pose proof (IHSubst e1'0).
++      equality.
++  * inversion H; subst; clear H; equality.
++  * inversion H0; subst; clear H0.
++    pose proof (IHSubst r'0).
++    equality.
++  * inversion H0; subst; clear H0.
++    pose proof (IHSubst r'0).
++    equality.
++  * inversion H1; subst; clear H1.
++    specialize (IHSubst1 e1'0).
++    specialize (IHSubst2 e2'0).
++    equality.
++Qed. (* CHANGE TO QED *)
+ (* END PROBLEM 1 *)
+ 
+ (** What does it mean for a variable to be free in an expression?
+@@ -313,5 +338,32 @@
+     closed e3.
+ Proof.
+   (* YOUR PROOF HERE *)
+-Admitted. (* CHANGE TO QED *)
++  induct 1; simplify; try equality.
++  * apply closed_app_inv in H1.
++    destruct H1.
++    specialize (IHSubst1 H1 H2).
++    specialize (IHSubst2 H3 H2).
++    apply closed_app_intro; auto.
++  * pose proof (closed_lam_inv x1 e1 H1).
++    pose proof (subst_only_free e1 e x2 e1').
++    pose proof (H3 x2).
++    apply not_eq_sym in H.
++    pose proof (H5 H).
++    pose proof (H4 H0 H6).
++    rewrite <- H7.
++    equality.
++  * eapply closed_ref_intro.
++    eapply IHSubst.
++    eapply closed_ref_inv.
++    assumption.
++    assumption.
++  * eapply closed_deref_intro.
++    eapply IHSubst; eauto.
++    eapply closed_deref_inv; eauto.
++  * apply closed_assign_inv in H1.
++    destruct H1.
++    eapply closed_assign_intro.
++    + eapply IHSubst1; eauto.
++    + eapply IHSubst2; eauto.
++Qed. (* CHANGE TO QED *)
+ (* END PROBLEM 2 *)

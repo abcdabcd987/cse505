@@ -1,0 +1,119 @@
+def mk_world(width, height) {
+  w = alloc(height, 0);
+  i = 0;
+  while(i < height) {
+    x = alloc(width, 0);
+    w[i] = x;
+    i = i + 1;
+  }
+  return w;
+}
+
+def print_world(w) {
+  i = 0;
+  while(i < len(w)) {
+    DUMMY = print_val(w[i]);
+    i = i + 1;
+  }
+  return 0;
+}
+
+def clear() {
+  i = 0;
+  while(i < 30) {
+    DUMMY = print_val(0);
+    i = i + 1;
+  }
+  return 0;
+}
+
+def nap(n) {
+  if(0 < n) {
+    DUMMY = nap(n - 1);
+    DUMMY = nap(n - 1);
+  }
+  return 0;
+}
+
+def neighbor_count(world, i, j) {
+  height = len(world);
+  width  = len(world[0]);
+
+  up    = (i - 1 + height) % height;
+  down  = (i + 1 + height) % height;
+  left  = (j - 1 + width) % width;
+  right = (j + 1 + width) % width;
+
+  n = world[up][left]   + world[up][j]   + world[up][right] +
+      world[i][left]    +      0         + world[i][right]  +
+      world[down][left] + world[down][j] + world[down][right];
+
+  return n;
+}
+
+def step(prev, next) {
+  height = len(prev);
+  width  = len(prev[0]);
+
+  i = 0;
+  while(i < height) {
+    j = 0;
+    while(j < width) {
+      n = neighbor_count(prev, i, j);
+      r = next[i];
+      if(prev[i][j] == 0) {
+        if(n == 3) {
+          r[j] = 1;
+        } else {
+          r[j] = 0;
+        }
+      } else {
+        if(n == 2 or n == 3) {
+          r[j] = 1;
+        } else {
+          r[j] = 0;
+        }
+      }
+      j = j + 1;
+    }
+    i = i + 1;
+  }
+  return 0;
+}
+
+W = 20;
+H = 20;
+
+prev = mk_world(W, H);
+next = mk_world(W, H);
+
+# set up initial state
+baseR = 9;
+baseC = 8;
+
+R = prev[baseR];
+R[baseC + 1] = 1;
+
+R = prev[baseR + 1];
+R[baseC + 3] = 1;
+
+R = prev[baseR + 2];
+R[baseC + 0] = 1;
+R[baseC + 1] = 1;
+R[baseC + 4] = 1;
+R[baseC + 5] = 1;
+R[baseC + 6] = 1;
+
+while(True) {
+  DUMMY = print_world(prev);
+  DUMMY = step(prev, next);
+  #DUMMY = nap(20);
+  DUMMY = clear();
+
+  DUMMY = print_world(next);
+  DUMMY = step(next, prev);
+  #DUMMY = nap(20);
+  DUMMY = clear();
+}
+
+return 0;

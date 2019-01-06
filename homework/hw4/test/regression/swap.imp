@@ -1,0 +1,12 @@
+x = read_int();
+y = read_int();
+
+a = alloc(2, 0);
+a[0] = x;
+a[1] = y;
+
+t = a[0];
+a[0] = a[1];
+a[1] = t;
+
+return a;

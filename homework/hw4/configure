@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+function ckcmd {
+  if ! command -v "$1" > /dev/null 2>&1; then
+    echo "Error: could not find $1"
+    exit 1
+  fi
+}
+
+function ckdeps {
+  ckcmd coqc
+  ckcmd ocamlbuild
+
+  if ! coqc --version | grep -q 'version 8.8'; then
+    echo "Error: bad coqc version, need Coq 8.8"
+    exit 1
+  fi
+}
+
+function coqproj {
+  for d in $(find coq -type d); do
+    echo "-Q $d Imp"
+  done
+  echo "-R ./frap Frap"
+  echo
+  find coq -iname '*.v'
+}
+
+function main {
+  ckdeps
+  coqproj > _CoqProject
+}
+
+main
